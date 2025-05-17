@@ -20,14 +20,14 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define UMDF_USING_NTSTATUS
-#include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
-#include <ws2tcpip.h>
+//#include <winsock2.h>
+//#pragma comment(lib, "ws2_32.lib")
+#//include <ws2tcpip.h>
 
 #include <windows.h>
 #undef DrawText
-#include <d3d9.h>
-#pragma comment(lib,"d3d9")
+//#include <d3d9.h>
+//#pragma comment(lib,"d3d9")
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -47,13 +47,13 @@ auto now=std::chrono::high_resolution_clock::now;
 typedef std::chrono::duration<double, std::milli> dms;
 double dmsc(dms diff){return diff.count();}
 
-#include <shellapi.h>
-#pragma comment(lib,"shell32")
+//#include <shellapi.h>
+//#pragma comment(lib,"shell32")
 #include <intrin.h>
-#include <powerbase.h>
-#include <ntstatus.h>
-#define NTSTATUS LONG
-#pragma comment(lib,"PowrProf")
+//#include <powerbase.h>
+//#include <ntstatus.h>
+//#define NTSTATUS LONG
+//#pragma comment(lib,"PowrProf")
 using std::string;
 using std::string_view;
 using std::vector;
@@ -612,7 +612,12 @@ public:
   QapColor(byte A,byte R,byte G,byte B):a(A),r(R),g(G),b(B) {}
   QapColor(byte R,byte G,byte B):a(255),r(R),g(G),b(B) {}
   QapColor(const QapColor& v):a(v.a),r(v.r),g(v.g),b(v.b) {}
+  QapColor(const unsigned int&v){*this=(QapColor&)v;}
 public:
+  bool operator==(const QapColor&v)
+  {
+    return(a==v.a)&&(r==v.r)&&(g==v.g)&&(b==v.b);
+  }
   QapColor&operator=(const QapColor&v)
   {
     a=v.a;
@@ -721,6 +726,7 @@ public:
     return *this;
   }
 public:
+  /*
   QapColor(const D3DCOLOR& v)
   {
     *((D3DCOLOR*)(void*)this)=v;
@@ -728,7 +734,10 @@ public:
   operator D3DCOLOR&()const
   {
     return *(DWORD*)this;
-  };
+  };*/
+  operator unsigned int&()const{
+    return *(unsigned int*)this;
+  }
 public:
 public:
   byte GetLuminance()const
@@ -936,10 +945,10 @@ public:
     return QapColor(x,y,z,w);
   }
 };
-class vec3f:public D3DVECTOR{
+class vec3f{
 public:
-  //float x,y,z;
-  vec3f(const D3DVECTOR&v):D3DVECTOR(v){}
+  float x,y,z;
+  //vec3f(const D3DVECTOR&v):D3DVECTOR(v){}
   vec3f(){x=0;y=0;z=0;}
   vec3f(float x,float y,float z)
   {
@@ -1422,7 +1431,7 @@ inline vec2d Vec2dEx(const real&ang,const real&mag)
 inline real vec2d_cross(const vec2d&a,const vec2d&b)
 {
   return a.x*b.y-a.y*b.x;
-}
+}/*
 struct QapMat4:public D3DMATRIX
 {
 public:
@@ -1650,7 +1659,7 @@ inline QapMat4 Scale(const float x,const float y,const float z)
         0,0,0,1
       );
 }
-
+*/
 
 class CrutchIO{
 public:
@@ -1903,6 +1912,7 @@ enum TMouseButton
   mbRight=258,
   mbMiddle=259,
 };
+/*
 static QapMat4 MatrixLookAtLH(const vec3f&eye,const vec3f&at,const vec3f&up)
 {
   //
@@ -1928,7 +1938,8 @@ static QapMat4 MatrixPerspectiveFovLH(float fovy,float aspect,float zn,float zf)
     0     ,   0   , zf/(zf-zn)    , 1,
     0     ,   0   , -zn*zf/(zf-zn), 0
   );
-}
+}*/
+/*
 class QapD3DPresentParameters
 {
 public:
@@ -2040,6 +2051,7 @@ public:
     if(pD3D)pD3D->Release();
   }
 };
+
 class QapD3D9Resource
 {
 public:
@@ -2156,6 +2168,7 @@ public:
     Arr.pop_back();
   }
 };
+*//*
 class QapD3DDev9
 {
 public:
@@ -2370,10 +2383,11 @@ public:
     pDev->Clear(0,NULL,D3DCLEAR_TARGET,Color,1.0f,0);
   }
 };
-
+*/
 #include "t_quad.inl"
 #pragma once
 #pragma warning(disable:4482)
+#if(0)
 class QapDev
 {
 public:
@@ -3679,7 +3693,7 @@ public:
 public:
   #include "t_geom.inl"
 };
-
+#endif
 template<class TYPE>
 class QapArray
 {
@@ -3756,6 +3770,7 @@ public:
     return (TYPE*)(void*)(TMemory::ptr_t*)Mem.ptr;
   }
 };
+typedef unsigned char byte;
 class QapTexMem
 {
 public:
@@ -4259,7 +4274,7 @@ public:
             AF[3]+=T.A*BBM[t];
           };
           for (int i=0;i<4;i++)AF[i]/=MartixSum*255.0;
-          QapColor PCC=D3DCOLOR_COLORVALUE(AF[0],AF[1],AF[2],AF[3]);
+          QapColor PCC=QapColor(AF[0]/255,AF[1]/255,AF[2]/255,AF[3]/255);
           *PC=*((QapARGB*)&PCC);
         }
       memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
@@ -4315,7 +4330,7 @@ public:
   {
   }
 };
-class QapTex
+/*class QapTex
 {
 public:
   class TDynamicResource:public QapD3D9Resource
@@ -4434,6 +4449,7 @@ public:
     QapDebugMsg("fail");
   }
 };
+*/
 #pragma once
 class GlobalEnv
 {
@@ -4754,13 +4770,13 @@ inline void file_put_contents_v2(const string&fn,const string&data){
 //-------------------------------------------//
 #undef SAY
 //-------------------------------------------//
-
+/*
 void DrawLine(QapDev&qDev,const vec2d&a,const vec2d&b,real line_size)
 {
   qDev.DrawQuad((b+a)*0.5,(b-a).Mag(),line_size,(b-a).GetAng());
-}
+}*/
 template<class TYPE>TYPE sqr(TYPE x){return x*x;}
-
+/*
 struct t_offcentric_scope{
   QapDev&qDev;
   const vec2d&unit_pos;
@@ -4797,7 +4813,7 @@ struct t_offcentric_scope{
     qDev.xf.set_ident();
   }
 };
-
+*/
 template<class MONSTER,class UNIT>
 static const UNIT*get_near_unit(const MONSTER&a,const vector<UNIT>&arr)
 {

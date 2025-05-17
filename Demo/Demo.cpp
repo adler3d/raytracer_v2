@@ -99,6 +99,7 @@ struct t_mesh{
     }
     VA=out;
   }
+  /*
   void draw_without_ca(QapDev&qDev)
   {
     auto base=qDev.VPos;
@@ -118,7 +119,7 @@ struct t_mesh{
       qDev.AddVertex(VA[i]);
     }
     for(int i=0;i<IA.size();i++)qDev.AddIndex(base+IA[i]);
-  }
+  }*/
   bool empty()const{return IA.empty();}
 };
 void load_mesh_obj(t_mesh&out,const string&fn){
@@ -255,14 +256,15 @@ void load_mesh_obj(t_mesh&out,const string&fn){
 
 struct t_obj{
   t_mesh m;
+  static inline vec3f toVec3f(const vec2d&pos,float z=0){return vec3f(pos.x,pos.y,z);}
   void make_cube_fast(const QapColor&color,const vec3f&offset,const vec3f&size=vec3f_one)
   {
     vec2i arr[]={vec2i(-1,-1),vec2i(+1,-1),vec2i(+1,+1),vec2i(-1,+1)};
     auto vp=0;
     for(int i=0;i<4;i++)
     {
-      auto a=QapDev::toVec3f(arr[i],-1).RawMul(size*0.5)+offset;
-      auto b=QapDev::toVec3f(arr[i],+1).RawMul(size*0.5)+offset;
+      auto a=toVec3f(arr[i],-1).RawMul(size*0.5)+offset;
+      auto b=toVec3f(arr[i],+1).RawMul(size*0.5)+offset;
       m.VA.push_back(a);
       m.CA.push_back(color);
       m.VA.push_back(b);
@@ -695,7 +697,7 @@ struct t_perspective_proj{
   real aspect;
   real zn;
   real zf;
-  QapMat4 get_mat()const{return MatrixPerspectiveFovLH(fovy,aspect,zn,zf);}
+  //QapMat4 get_mat()const{return MatrixPerspectiveFovLH(fovy,aspect,zn,zf);}
   vec2d get_wh()const{
     auto h=zn*tan(fovy*0.5);
     return vec2d(aspect*h,h);

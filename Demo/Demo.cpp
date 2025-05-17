@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <string>
-#include <io.h>
+//#include <io.h>
 using namespace std;
 
 struct t_obj_face_item{int id;int tid;};
@@ -679,9 +679,10 @@ t_obj generate_sky(){
   return obj;
 }
 vector<vec3f> load_dirs(const string&fn){
-  if(_access(fn.c_str(),0)!=0){QapDebugMsg(fn+" - not found");QapNoWay();}
+  //if(_access(fn.c_str(),0)!=0){QapDebugMsg(fn+" - not found");QapNoWay();}
   CrutchIO IO;
   IO.LoadFile(fn);
+  if(IO.mem.empty()){QapDebugMsg(fn+" - not found or empty");QapNoWay();}
   int count=0;
   IO.read((char*)&count,sizeof(count));
   vector<vec3f> arr;arr.resize(count);

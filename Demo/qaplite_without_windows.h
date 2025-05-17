@@ -4232,8 +4232,9 @@ public:
     {
       uchar B,G,R,A;
     };
-    static QapARGB VoidMem[2048*2048*4];
-    memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
+    thread_local QapARGB VoidMem[2048*2048*4];
+    for(int i=0;i<sizeof(VoidMem)/sizeof(VoidMem[0]);i++)VoidMem[i]=(QapARGB&)pBits[i];
+    //memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
     static int BBM[9]=
     {
       1,2,1,
@@ -4278,7 +4279,8 @@ public:
           QapColor PCC=QapColor(AF[0]/255,AF[1]/255,AF[2]/255,AF[3]/255);
           *PC=*((QapARGB*)&PCC);
         }
-      memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
+      //memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
+      for(int i=0;i<sizeof(VoidMem)/sizeof(VoidMem[0]);i++)VoidMem[i]=(QapARGB&)pBits[i];
     }
     return;
   }
@@ -4665,7 +4667,7 @@ public:
   int64 freq,beg,tmp;
   bool run;
 public:
-  QapClock(){QueryPerformanceFrequency((LARGE_INTEGER*)&freq);run=false;tmp=0;}
+  QapClock(){QueryPerformanceFrequency((LARGE_INTEGER*)&freq);run=false;tmp=0;Start();}
   void Start(){QueryPerformanceCounter((LARGE_INTEGER*)&beg);run=true;}
   void Stop(){QueryPerformanceCounter((LARGE_INTEGER*)&tmp);run=false;tmp-=beg;}
   double Time(){if(run)QueryPerformanceCounter((LARGE_INTEGER*)&tmp);return run?double(tmp-beg)/double(freq):double(tmp)/double(freq);}
@@ -4686,7 +4688,7 @@ public:
   double beg,tmp;
   bool run;
 public:
-  QapClock(){run=false;tmp=0;}
+  QapClock(){run=false;tmp=0;Start();}
   void Start(){beg=get_ms();run=true;}
   void Stop(){tmp=get_ms();run=false;tmp-=beg;}
   static double get_ms(){
@@ -4744,7 +4746,7 @@ static bool qap_add_unique_str(vector<string>&arr,const string&value){
   arr.push_back(value);
   return true;
 }
-inline string FToS(const real&val){char c[64];if(abs(val)>1e9){_snprintf_s(c,32,32,"%e",val);}else{sprintf_s(c,"%.2f",val);}return string(c);}
+inline string FToS(const real&val){return std::to_string(val);}
 inline string CToS(const char&val){string tmp="";tmp.push_back(val);return tmp;};
 inline string UpperStr(const string&s){string str=s;for(int i=0;i<int(str.size());i++)str[i]=toupper(str[i]);return std::move(str);}
 inline string LowerStr(const string&s){string str=s;for(int i=0;i<str.size();i++)str[i]=tolower(str[i]);return std::move(str);}
@@ -4855,12 +4857,13 @@ static const UNIT*get_near_unit(const MONSTER&a,const vector<UNIT>&arr)
   }
   return id<0?nullptr:&arr[id];
 }
-inline int SToI(const string&S){int i;sscanf_s(S.c_str(),"%i",&i);return i;};
-inline string IToH(const int&val){char d[255]; sprintf_s(d,sizeof(d),"0x%08X",val); return string(d);}
+inline int SToI(const string&S){return stoi(S);};
+/*inline string IToH(const int&val){char d[255]; sprintf_s(d,sizeof(d),"0x%08X",val); return string(d);}
 inline string IToH(const int&val,int n){char d[255]; n=n<0?8:n>8?8:n; string c=IToS(n); sprintf_s(d,sizeof(d),("0x%0"+c+"X").c_str(),val); return string(d);}
 inline string IToH_raw(const int&val){char d[255]; sprintf_s(d,sizeof(d),"%08X",val); return string(d);}
 inline string CToH_raw(const unsigned char&val){char d[3]; sprintf_s(d,sizeof(d),"%02X",val); return string(d);}
 inline int HToI_raw(const string&str){int val;sscanf_s(str.c_str(),"%08X",&val); return val;}
+*/
 static inline bool IsLegalChar(const uchar&c)
 {
   #define F(A,B)bool(uchar(A)<=c&&uchar(B)>=c)

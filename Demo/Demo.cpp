@@ -594,7 +594,7 @@ t_hdr to_hdr(const vector<t_frag>&frags,int cx,int cy){
   return out;
 }
 void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<vec3f>&dirs,t_proj&proj,const string&fn){
-  int begin=GetTickCount();
+  QapClock clock;
   enum{ground_id=0,model_id=1,sky_id=2};
   t_scene scene;
   scene.add(ground,0);
@@ -640,9 +640,9 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
     if(di%proj.cx==proj.cx-1){
       #pragma omp critical(nope)
       {
-        auto gtc=GetTickCount();
-        auto dt=(gtc-prev_ticks)*0.001;prev_ticks=gtc;
-        auto t=(gtc-begin)*0.001;
+        auto ms=clock.MS();
+        auto dt=(ms-prev_ticks)*0.001;prev_ticks=ms;
+        auto t=ms;
         auto ste=t*(n-di)/(di+1);
         auto ste2=(n-di)*dt/proj.cx;
         cout<<"["<<to_string(t)<<" sec]: "<<y<<"/"<<proj.cy<<" // "<<ste<<" sec till end. // ste2="<<ste2<<endl;

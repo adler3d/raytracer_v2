@@ -642,7 +642,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
       {
         auto ms=clock.MS();
         auto dt=(ms-prev_ticks)*0.001;prev_ticks=ms;
-        auto t=ms;
+        auto t=ms*0.001;
         auto ste=t*(n-di)/(di+1);
         auto ste2=(n-di)*dt/proj.cx;
         cout<<"["<<to_string(t)<<" sec]: "<<y<<"/"<<proj.cy<<" // "<<ste<<" sec till end. // ste2="<<ste2<<endl;

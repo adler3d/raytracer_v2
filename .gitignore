@@ -16,3 +16,10 @@
 /Release/out — копия.png
 /Demo/x64/Debug
 /x64/Debug
+/Demo/x64/Release
+/x64/Release/Demo.pdb
+/x64/Release/Demo.ipdb
+/x64/Release/Demo.iobj
+/x64/Release
+/Release/Demo.exe
+/Release/Demo.elf

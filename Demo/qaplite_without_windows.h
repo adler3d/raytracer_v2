@@ -240,7 +240,7 @@ inline int WinMessageBox(const string&caption,const string&text)
 {
   string full_text=text+"\n\n    [Skip]            [Break]            [Ignore]";
   #ifdef _OPENMP
-    full_text="omp_get_thread_num() : "+IToS(omp_get_thread_num())+"\n\n"+full_text;
+    //full_text="omp_get_thread_num() : "+IToS(omp_get_thread_num())+"\n\n"+full_text;
   #endif
   std::cerr<<caption<<"\n"<<full_text<<std::endl;
   return qmbrBreak;

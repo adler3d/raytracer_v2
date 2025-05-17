@@ -69,7 +69,6 @@ typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
-#include "vector_view.inl"
 inline bool SysQapAssert(const string&exp,bool&ignore,const string&filename,const int line,const string&funcname);
 inline bool SysQapDebugMsg(const string&msg,bool&ignore,const string&filename,const int line,const string&funcname);
 #if(defined(_DEBUG)||defined(QAP_DEBUG))
@@ -87,6 +86,8 @@ inline bool SysQapDebugMsg(const string&msg,bool&ignore,const string&filename,co
 #else
 #define QapNoWay()
 #endif
+
+#include "vector_view.inl"
 static vector<string> split(const std::string_view&s,const std::string_view&needle)
 {
   vector<string> arr;
@@ -228,11 +229,8 @@ template<typename TYPE>bool InDip(TYPE min,TYPE val,TYPE max)
 //  ReleaseDC(0,DC);
 //  return Res;
 //}
-inline string IToS(const int&val)
-{
-  char c[16];
-  _itoa_s(val,c,10);
-  return string(c);
+inline string IToS(const int&val){
+  return std::to_string(val);
 }
 enum QapMsgBoxRetval
 {
@@ -574,15 +572,6 @@ public:
   real sqr_dist_to(const vec2d&p)const{return (p-*this).SqrMag();}
   bool dist_to_point_less_that_r(const vec2d&p,real r)const{return (p-*this).SqrMag()<r*r;}
 public:
-  friend inline static real dot(const vec2d&a,const vec2d&b)
-  {
-    return a.x*b.x+a.y*b.y;
-  }
-  friend inline static real cross(const vec2d&a,const vec2d&b)
-  {
-    return a.x*b.y-a.y*b.x;
-  }
-public:
   //static vec2d vec2d_min
   static vec2d min(const vec2d&a,const vec2d&b)
   {
@@ -597,6 +586,14 @@ public:
   static void comax(vec2d&a,const vec2d&b){a=max(a,b);}
   static vec2d sign(const vec2d&p){return vec2d(Sign(p.x),Sign(p.y));}
 };
+inline static real dot(const vec2d&a,const vec2d&b)
+{
+  return a.x*b.x+a.y*b.y;
+}
+inline static real cross(const vec2d&a,const vec2d&b)
+{
+  return a.x*b.y-a.y*b.x;
+}
 class QapColor
 {
 public:
@@ -3697,7 +3694,7 @@ public:
   #include "t_geom.inl"
 };
 #endif
-template<class TYPE>
+/*template<class TYPE>
 class QapArray
 {
 public:
@@ -3773,6 +3770,7 @@ public:
     return (TYPE*)(void*)(TMemory::ptr_t*)Mem.ptr;
   }
 };
+*/
 typedef unsigned char byte;
 class QapTexMem
 {
@@ -3780,7 +3778,7 @@ public:
 public:
   typedef QapTexMem SelfClass;
 public:
-  QapArray<QapColor> Arr;
+  vector<QapColor> Arr;
   int W;
   int H;
 public:
@@ -3852,28 +3850,28 @@ public:
   {
     this->W=W;
     this->H=H;
-    Arr.Init(W*H);
+    Arr.resize(W*H);
   }
   void Free()
   {
-    Arr.Free();
+    Arr={};
   }
   QapColor*get()
   {
-    return Arr.get();
+    return Arr.data();
   }
   const QapColor*get()const
   {
-    return Arr.get();
+    return Arr.data();
   }
   operator bool()const
   {
-    return Arr;
+    return Arr.size();
   }
 public:
   void InvertY()
   {
-    QapColor*pBits=Arr.get();
+    QapColor*pBits=Arr.data();
     for (int i=0;i<H/2;i++)
     {
       int a=W*(i);
@@ -3886,7 +3884,7 @@ public:
   }
   void InvertX()
   {
-    QapColor*pBits=Arr.get();
+    QapColor*pBits=Arr.data();
     for (int i=0;i<H;i++)
     {
       QapColor*pLine=&pBits[i*W];

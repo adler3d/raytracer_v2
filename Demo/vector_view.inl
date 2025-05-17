@@ -39,8 +39,9 @@ const vector_view<TYPE> make_view(const vector<TYPE>&ref,int start,int n)
 {
   vector_view<TYPE> vv;if(!n)return vv;
   if(!qap_check_id(ref,start)||!qap_check_id(ref,start+n-1)){
-    #define QAP_SHOW_FLOATS(F)F(ref.size())F(start)F(n)F(start+n-1)
-    #include "qap_show_floats.inl"
+    QapNoWay();
+    //#define QAP_SHOW_FLOATS(F)F(ref.size())F(start)F(n)F(start+n-1)
+    //#include "qap_show_floats.inl"
   }
   vv.p=n?&ref[start]:nullptr;
   vv.n=n;

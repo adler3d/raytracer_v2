@@ -41,7 +41,6 @@ jobs:
 		  unlink tank_hodun.png 
           ../Demo.elf tank_hodun.obj 128
           ls -lht
-
           cat /proc/cpuinfo
       - name: Archive results
         uses: actions/upload-artifact@v4

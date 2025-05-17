@@ -24,7 +24,7 @@
 //#pragma comment(lib, "ws2_32.lib")
 #//include <ws2tcpip.h>
 
-#include <windows.h>
+//#include <windows.h>
 #undef DrawText
 //#include <d3d9.h>
 //#pragma comment(lib,"d3d9")
@@ -35,6 +35,7 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <array>
 #include <bitset>
 #include <time.h>
@@ -63,8 +64,8 @@ using std::iostream;
 using std::stringstream;
 using std::array;
 typedef double real;
-typedef INT64 int64;
-typedef UINT64 uint64;
+typedef long long int int64;
+typedef unsigned long long int uint64;
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
@@ -109,6 +110,7 @@ static string join(const vector<string>&arr,const string&glue)
   for(int i=0;i<arr.size();i++){if(i)out+=glue;out+=arr[i];}
   return out;
 }
+/*
 FILETIME get_systime_percise_as_filetime(){FILETIME ft;GetSystemTimePreciseAsFileTime(&ft);return ft;}
 SYSTEMTIME filetime_to_systime(const FILETIME&ft){SYSTEMTIME st;FileTimeToSystemTime(&ft,&st);return st;}
 SYSTEMTIME get_localtime(const SYSTEMTIME&src){SYSTEMTIME out;SystemTimeToTzSpecificLocalTime(0,&src,&out);return out;}
@@ -138,6 +140,7 @@ string systime_to_str(const SYSTEMTIME&st){
   #undef F
   return buff;
 }
+*/
 //string systime_to_str_v1(const SYSTEMTIME&st){
 //  #define F(VAR,FIELD,OFFSET)auto VAR=st.FIELD+OFFSET;
 //  F(Y,wYear,0);
@@ -155,8 +158,8 @@ string systime_to_str(const SYSTEMTIME&st){
 //  );
 //  return buff;
 //}
-string filetime_to_localstr(const FILETIME&ft){return systime_to_str(filetime_to_localtime(ft));}
-string local_cur_date_str_v4(){auto lt=get_percise_localtime();return systime_to_str(lt);}
+//string filetime_to_localstr(const FILETIME&ft){return systime_to_str(filetime_to_localtime(ft));}
+//string local_cur_date_str_v4(){auto lt=get_percise_localtime();return systime_to_str(lt);}
 template<class TYPE>static bool qap_check_id(const vector<TYPE>&arr,int id){return id>=0&&id<arr.size();}
 template<class TYPE>static bool qap_check_id(const vector<TYPE>&arr,int64 id){return id>=0&&id<arr.size();}
 struct TScreenMode
@@ -218,13 +221,13 @@ template<typename TYPE>bool InDip(TYPE min,TYPE val,TYPE max)
 {
   return (val>=min)&&(val<=max);
 };
-inline TScreenMode GetScreenMode()
-{
-  HDC DC=GetDC(0);
-  TScreenMode Res={GetDeviceCaps(DC,HORZRES),GetDeviceCaps(DC,VERTRES),GetDeviceCaps(DC,BITSPIXEL),GetDeviceCaps(DC,VREFRESH)};
-  ReleaseDC(0,DC);
-  return Res;
-}
+//inline TScreenMode GetScreenMode()
+//{
+//  HDC DC=GetDC(0);
+//  TScreenMode Res={GetDeviceCaps(DC,HORZRES),GetDeviceCaps(DC,VERTRES),GetDeviceCaps(DC,BITSPIXEL),GetDeviceCaps(DC,VREFRESH)};
+//  ReleaseDC(0,DC);
+//  return Res;
+//}
 inline string IToS(const int&val)
 {
   char c[16];
@@ -238,11 +241,11 @@ enum QapMsgBoxRetval
 inline int WinMessageBox(const string&caption,const string&text)
 {
   string full_text=text+"\n\n    [Skip]            [Break]            [Ignore]";
-  const int nCode=MessageBoxA(NULL,full_text.c_str(),caption.c_str(),MB_CANCELTRYCONTINUE|MB_ICONHAND|MB_SETFOREGROUND|MB_TASKMODAL);
-  QapMsgBoxRetval retval=qmbrSkip;
-  if(IDCONTINUE==nCode)retval=qmbrIgnore;
-  if(IDTRYAGAIN==nCode)retval=qmbrBreak;
-  return retval;
+  #ifdef _OPENMP
+    full_text="omp_get_thread_num() : "+IToS(omp_get_thread_num())+"\n\n"+full_text;
+  #endif
+  std::cerr<<caption<<"\n"<<full_text<<std::endl;
+  return qmbrBreak;
 }
 typedef int(*TQapMessageBox)(const string&caption,const string&text);
 struct TMessageBoxCaller
@@ -4215,7 +4218,7 @@ public:
       p.a=sum>t3?255:t3?255*sum/t3:0;
     }
   }
-  void FillChannel(const QapColor&Source,DWORD BitMask)
+  void FillChannel(const QapColor&Source,unsigned int BitMask)
   {
     auto*pBits=get();
     for (int i=0;i<W*H;i++)
@@ -4229,7 +4232,7 @@ public:
     auto*pBits=get();
     struct QapARGB
     {
-      BYTE B,G,R,A;
+      uchar B,G,R,A;
     };
     static QapARGB VoidMem[2048*2048*4];
     memcpy_s(VoidMem,sizeof(VoidMem),pBits,W*H*sizeof(QapARGB));
@@ -4451,7 +4454,7 @@ public:
 };
 */
 #pragma once
-class GlobalEnv
+/*class GlobalEnv
 {
 public:
   HINSTANCE hInstance;
@@ -4488,8 +4491,8 @@ static bool IsKeyDown(int vKey)
 {
   int i=GetAsyncKeyState(vKey);
   return i<0;
-}
-class TQuad
+}*/
+/*class TQuad
 {
 public:
 public:
@@ -4595,7 +4598,7 @@ public:
     setAtCenter(getFullScreen());
   }
 };
-//---
+*///---
 
 struct QapFontInfo{
   typedef vec2i vec2i_256[256];
@@ -4608,7 +4611,7 @@ struct QapFont{
   QapTexMem Mem;
   QapFontInfo Info;
 };
-
+/*
 struct QapBitmapInfo{
   BITMAPINFO BI;
   BITMAPINFOHEADER&BH;
@@ -4655,7 +4658,9 @@ static void CreateFontMem(HWND hWnd,QapTexMem&Out,QapFontInfo&Info,const string&
     ReleaseDC(hWnd,DC);
   }
   Out.InvertY();
-}
+}*/
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#include <windows.h>
 class QapClock
 {
 public:
@@ -4675,6 +4680,31 @@ public:
     return 0;
   }
 };
+#else
+#include <sys/time.h>
+class QapClock
+{
+public:
+  double beg,tmp;
+  bool run;
+public:
+  QapClock(){run=false;tmp=0;}
+  void Start(){beg=get_ms();run=true;}
+  void Stop(){tmp=get_ms();run=false;tmp-=beg;}
+  static double get_ms(){
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    auto v=(tv.tv_sec*1000+tv.tv_usec/1000.0);
+    static auto prev=v;
+    return v-prev;
+  }
+  double MS()
+  {
+    if(run)tmp=get_ms();
+    return run?tmp-beg:tmp;
+  }
+};
+#endif
 template<class TYPE>
 void QapPopFront(vector<TYPE>&arr)
 {

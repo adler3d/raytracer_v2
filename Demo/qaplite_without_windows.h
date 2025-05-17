@@ -44,6 +44,7 @@
 #include <atomic>
 #include <chrono>
 #include <string_view>
+#include <omp.h> 
 auto now=std::chrono::high_resolution_clock::now;
 typedef std::chrono::duration<double, std::milli> dms;
 double dmsc(dms diff){return diff.count();}
@@ -240,7 +241,7 @@ inline int WinMessageBox(const string&caption,const string&text)
 {
   string full_text=text+"\n\n    [Skip]            [Break]            [Ignore]";
   #ifdef _OPENMP
-    //full_text="omp_get_thread_num() : "+IToS(omp_get_thread_num())+"\n\n"+full_text;
+    full_text="omp_get_thread_num() : "+IToS(omp_get_thread_num())+"\n\n"+full_text;
   #endif
   std::cerr<<caption<<"\n"<<full_text<<std::endl;
   return qmbrBreak;

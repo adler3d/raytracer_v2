@@ -744,6 +744,7 @@ void render_model_from_file(const string&name,int d=128){
   render(ground,model,sky,dirs,proj,name+".png");
 }
 int main(int argc,char *argv[]){
+  cout<<"omp_get_num_threads()="<<omp_get_num_threads()<<endl;
   if(bool hard_coded_fn=argc==1){
     render_model_from_file("tank_hodun",128);
   }else{

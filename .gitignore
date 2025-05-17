@@ -3,3 +3,14 @@
 ################################################################################
 
 /.vs/Demo/v15
+/Demo/Debug
+/Demo/Release
+/Debug/Demo.ilk
+/Debug/Demo.pdb
+/Debug
+/Release/Demo.pdb
+/Release/Demo.ipdb
+/Release/Demo.iobj
+/Release/rtv4.exe
+/Release/rtv3.exe
+/Release/out — копия.png

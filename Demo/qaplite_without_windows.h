@@ -50,7 +50,7 @@ double dmsc(dms diff){return diff.count();}
 
 //#include <shellapi.h>
 //#pragma comment(lib,"shell32")
-#include <intrin.h>
+//#include <intrin.h>
 //#include <powerbase.h>
 //#include <ntstatus.h>
 //#define NTSTATUS LONG

@@ -804,8 +804,8 @@ public:
   vec3d operator-()const{return vec3d(-x,-y,-z);}
 public:
   #define LIST(F,G)F(x,G)F(y,G)F(z,G)
-  #define F(x,OPER)x##OPER##v.x;
-  #define U(OPER)void operator##OPER##(const SelfClass&v){LIST(F,OPER)}
+  #define F(x,OPER)x OPER v.x;
+  #define U(OPER)void operator OPER(const SelfClass&v){LIST(F,OPER)}
   U(=)U(+=)U(-=)
   #undef U
   #undef F

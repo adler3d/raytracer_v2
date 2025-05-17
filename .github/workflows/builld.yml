@@ -34,7 +34,7 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
-          g++ -o Demo.elf Demo/Demo.cpp -O2 -std=c++17 -static
+          g++ -o Demo.elf Demo/Demo.cpp -O2 -std=c++17 -static -fopenmp
           ls -lht
           cd Release
           ../Demo.elf ./Release/tank_hodun.obj 128

@@ -743,8 +743,16 @@ void render_model_from_file(const string&name,int d=128){
   auto proj=make_proj(d,d);
   render(ground,model,sky,dirs,proj,name+".png");
 }
+int get_num_threads(){
+  atomic_int num_threads=0;
+  #pragma omp parallel for schedule(dynamic,64)
+  for(int i=0;i<64*1000;i++){
+    if(num_threads==0)num_threads=omp_get_num_threads();
+  }
+  return num_threads;
+}
 int main(int argc,char *argv[]){
-  cout<<"omp_get_num_threads()="<<omp_get_num_threads()<<endl;
+  cout<<"v5\n omp_get_num_threads()="<<get_num_threads()<<endl;
   if(bool hard_coded_fn=argc==1){
     render_model_from_file("tank_hodun",128);
   }else{

@@ -36,8 +36,15 @@ jobs:
           echo test, and deploy your project.
           g++ -o Demo.elf Demo/Demo.cpp -O2 -std=c++17 -static
           ls -lht
-      - name: Archive code coverage results
+          ./Demo.elf ./Release/tank_hodun.obj 32
+          ls -lht
+      - name: Archive results
         uses: actions/upload-artifact@v4
         with:
           name: Demo
           path: Demo.elf
+      - name: Archive results
+        uses: actions/upload-artifact@v4
+        with:
+          name: Demo
+          path: tank_hodun.png

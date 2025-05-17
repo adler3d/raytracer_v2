@@ -606,7 +606,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   int i=0;atomic_int g_hits2=0;
   int n=proj.cy*proj.cx;
   atomic_int di=0;
-  int prev_ticks=GetTickCount();
+  int prev_ticks=clock.MS();
   #pragma omp parallel for schedule(dynamic,64)
   for(int i=0;i<n;i++){
     int y=i/proj.cx;int x=i%proj.cx;

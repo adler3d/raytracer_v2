@@ -616,7 +616,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
     if(out.t<=0)return;
     int wins=0;int hit2=0;
     for(auto&dir:dirs){
-      if(dot(out.n,dir)>0)return;
+      if(dot(out.n,dir)>0)continue;
       auto rc=scene.do_raycast(out.pos,dir);
       if(rc.t<=0)continue;
       if(rc.model_id==sky_id)wins++;

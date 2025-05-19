@@ -21,8 +21,8 @@ static t_obj_face_item get_obj_face_item(const string&s){
 
 struct t_obj_mtl_item{
   string name;
-  vec3d Ka;
-  vec3d Kd;
+  vec3d Ka={1,1,1};
+  vec3d Kd={1,1,1};
   QapColor get_diffuse()const{
     auto c=Kd*255;
     return QapColor(c.x,c.y,c.z);
@@ -607,16 +607,16 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   int n=proj.cy*proj.cx;
   atomic_int di=0;
   int prev_ticks=clock.MS();
-  #pragma omp parallel for schedule(dynamic,64)
-  for(int i=0;i<n;i++){
+  auto func=[&](int i)
+  {
     int y=i/proj.cx;int x=i%proj.cx;
     auto photon=proj.get_photon(x,y);
     auto&frag=frags[i];auto&frag_ground=frags_ground[i];
     auto out=scene.do_raycast(photon);
-    if(out.t<=0)continue;
+    if(out.t<=0)return;
     int wins=0;int hit2=0;
     for(auto&dir:dirs){
-      if(dot(out.n,dir)>0)continue;
+      if(dot(out.n,dir)>0)return;
       auto rc=scene.do_raycast(out.pos,dir);
       if(rc.t<=0)continue;
       if(rc.model_id==sky_id)wins++;
@@ -648,7 +648,13 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
         cout<<"["<<to_string(t)<<" sec]: "<<y<<"/"<<proj.cy<<" // "<<ste<<" sec till end. // ste2="<<ste2<<endl;
       }
     }
-  }
+  };
+  #ifdef _DEBUG
+    for(int i=0;i<n;i++)func(i);
+  #else
+    #pragma omp parallel for schedule(dynamic,64)
+    for(int i=0;i<n;i++)func(i);
+  #endif
   //QapDebugMsg(to_string(g_hits2));
   auto hdr=to_hdr(frags,proj.cx,proj.cy);
   for(int i=0;i<hdr.arr.size();i++){
@@ -754,7 +760,7 @@ int get_num_threads(){
 int main(int argc,char *argv[]){
   cout<<"v5\n omp_get_num_threads()="<<get_num_threads()<<endl;
   if(bool hard_coded_fn=argc==1){
-    render_model_from_file("tank_hodun",128);
+    render_model_from_file("MilitaryTruck",16);
   }else{
     auto arr=split(string(argv[1]),".");
     arr.pop_back();

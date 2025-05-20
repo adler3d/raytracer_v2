@@ -772,7 +772,7 @@ int main(int argc,char *argv[]){
     cout<<"usage: Demo model.obj 128"<<endl;
     return 0;
   }else{
-    cout<<"s=["<<s<<"]"<endl;
+    cout<<"s=["<<s<<"]"<<endl;
     auto arr=split(string(argv[1]),".");
     arr.pop_back();
     render_model_from_file(s,join(arr,"."),argc==3?stoi(argv[2]):128);

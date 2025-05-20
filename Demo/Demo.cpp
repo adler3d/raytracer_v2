@@ -739,13 +739,13 @@ t_proj make_proj(int w,int h){
   proj.center=proj.pos+proj.dir*proj.zn;
   return proj;
 }
-void render_model_from_file(const string&name,int d=128){
-  auto ground=load_obj("empty_ground.obj");
+void render_model_from_file(const string&dir,const string&name,int d=128){
+  auto ground=load_obj(dir+"empty_ground.obj");
   for(auto&ex:ground.m.CA){ex=0xFFffffff;}
   auto model=load_obj(name+".obj");
   //for(auto&ex:model.m.VA){ex*=4*2*2;}
   auto sky=generate_sky();
-  auto dirs=load_dirs("dirs.bin");
+  auto dirs=load_dirs(dir+"dirs.bin");
   auto proj=make_proj(d,d);
   render(ground,model,sky,dirs,proj,name+".png");
 }
@@ -758,13 +758,23 @@ int get_num_threads(){
   return num_threads;
 }
 int main(int argc,char *argv[]){
-  cout<<"v5\n omp_get_num_threads()="<<get_num_threads()<<endl;
-  if(bool hard_coded_fn=argc==1){
-    render_model_from_file("MilitaryTruck",16);
+  cout<<"v6\n omp_get_num_threads()="<<get_num_threads()<<endl;
+
+  auto s=string(argv[0]);
+  auto apos=s.find("/");
+  auto bpos=s.find("\\");
+  auto split_by=[&](const string&it){auto arr=split(s,it);arr.pop_back();s=join(arr,it)+it;};
+  if(apos==string::npos&&bpos==string::npos){}else if(apos!=string::npos&&bpos!=string::npos){
+    if(apos>bpos)split_by("/");
+    if(bpos>apos)split_by("\\");
+  }else if(apos==string::npos){split_by("\\");}else split_by("/");
+  if(argc==1){
+    cout<<"usage: Demo model.obj 128"<<endl;
+    return 0;
   }else{
     auto arr=split(string(argv[1]),".");
     arr.pop_back();
-    render_model_from_file(join(arr,"."),argc==3?stoi(argv[2]):128);
+    render_model_from_file(s,join(arr,"."),argc==3?stoi(argv[2]):128);
   }
   return 0;
 }

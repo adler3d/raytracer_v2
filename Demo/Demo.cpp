@@ -652,7 +652,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   #ifdef _DEBUG
     for(int i=0;i<n;i++)func(i);
   #else
-    #pragma omp parallel for schedule(dynamic,64)
+    //#pragma omp parallel for schedule(dynamic,64)
     for(int i=0;i<n;i++)func(i);
   #endif
   //QapDebugMsg(to_string(g_hits2));
@@ -684,11 +684,11 @@ t_obj generate_sky(){
   obj.make_cube_fast(0xfffefefe,vec3f(0,1.7,00),vec3f(5,0.1,5));
   return obj;
 }
-vector<vec3f> load_dirs(const string&fn){
+vector<vec3f> load_dirs(const string&fn,bool must_be_found){
   //if(_access(fn.c_str(),0)!=0){QapDebugMsg(fn+" - not found");QapNoWay();}
   CrutchIO IO;
   IO.LoadFile(fn);
-  if(IO.mem.empty()){QapDebugMsg(fn+" - not found or empty");QapNoWay();}
+  if(IO.mem.empty()){if(!must_be_found)return {};QapDebugMsg(fn+" - not found or empty");QapNoWay();}
   int count=0;
   IO.read((char*)&count,sizeof(count));
   vector<vec3f> arr;arr.resize(count);
@@ -722,15 +722,16 @@ t_perspective_proj get_our_proj(int w,int h)
   out.zf=64;
   return out;
 }
-t_proj make_proj(int w,int h){
+t_proj make_proj(int w,int h,real ang){
   t_proj proj;
   proj.cx=w;
   proj.cy=h;
   proj.wh=get_our_proj(w,h).get_wh();
-  //obj.make_cube_fast(0xfffefefe,vec3f(0,1.7,00),vec3f(5,0.1,5));
-  proj.pos=vec3f(0,1.51140523,0);
+  auto a=Pi/2-ang;
+  proj.pos=vec3f(1.51140523*cos(a),1.51140523*sin(a),0);
   //proj.dir=vec3f(-0.018422*0.25,-0.9969,-0.0162*0.5).Norm();
-  proj.dir=vec3f(1e-6,-1,1e-9).Norm();
+  auto v=Vec2dEx(a,1);
+  proj.dir=vec3f(1e-6-v.x,-v.y,1e-9).Norm();
   proj.zn=0.015625;
   proj.pwh=proj.get_pwh();
   proj.up=vec3f(0,1,0);
@@ -739,15 +740,17 @@ t_proj make_proj(int w,int h){
   proj.center=proj.pos+proj.dir*proj.zn;
   return proj;
 }
-void render_model_from_file(const string&path,const string&name,int d=128){
+void render_model_from_file(const string&path,const string&name,int d=128,real ang=0){
   auto ground=load_obj(path+"empty_ground.obj");
+  if(ground.m.VA.empty())ground=load_obj("empty_ground.obj");
   for(auto&ex:ground.m.CA){ex=0xFFffffff;}
   auto model=load_obj(name+".obj");
   //for(auto&ex:model.m.VA){ex*=4*2*2;}
   auto sky=generate_sky();
-  auto dirs=load_dirs(path+"dirs.bin");
-  auto proj=make_proj(d,d);
-  render(ground,model,sky,dirs,proj,name+".png");
+  auto dirs=load_dirs(path+"dirs.bin",false);
+  if(dirs.empty())dirs=load_dirs("dirs.bin",true);
+  auto proj=make_proj(d,d,ang);
+  render(ground,model,sky,dirs,proj,name+"_"+IToS(d)+"_"+FToS(ang)+".png");
 }
 int get_num_threads(){
   atomic_int num_threads=0;
@@ -769,16 +772,16 @@ string get_path(const string&fn){
   return s;
 }
 int main(int argc,char *argv[]){
-  cout<<"v6\n omp_get_num_threads()="<<get_num_threads()<<endl;
+  cout<<"v7\n omp_get_num_threads()="<<get_num_threads()<<endl;
   auto path=get_path(argv[0]);
   if(argc==1){
-    cout<<"usage: Demo model.obj 128"<<endl;
+    cout<<"Usage: Demo model.obj 128 0\n where 128 size of image and 0 the angle at which the image will be rendered"<<endl;
     return 0;
   }else{
     cout<<"path=["<<path<<"]"<<endl;
     auto arr=split(string(argv[1]),".");
     arr.pop_back();
-    render_model_from_file(path,join(arr,"."),argc==3?stoi(argv[2]):128);
+    render_model_from_file(path,join(arr,"."),argc>=3?stoi(argv[2]):128,argc>=4?stof(argv[3])*Pi/180.0:0);
   }
   return 0;
 }

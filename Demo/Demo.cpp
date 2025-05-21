@@ -652,7 +652,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   #ifdef _DEBUG
     for(int i=0;i<n;i++)func(i);
   #else
-    //#pragma omp parallel for schedule(dynamic,64)
+    #pragma omp parallel for schedule(dynamic,64)
     for(int i=0;i<n;i++)func(i);
   #endif
   //QapDebugMsg(to_string(g_hits2));

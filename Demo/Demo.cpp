@@ -597,9 +597,9 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   QapClock clock;
   enum{ground_id=0,model_id=1,sky_id=2};
   t_scene scene;
-  scene.add(ground,0);
-  scene.add(model,1);
-  scene.add(sky,2);
+  scene.add(ground,ground_id);
+  scene.add(model,model_id);
+  scene.add(sky,sky_id);
   vector<t_frag> frags,frags_ground;
   frags.resize(proj.count_pixels());
   frags_ground.resize(proj.count_pixels());

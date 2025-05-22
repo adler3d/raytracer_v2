@@ -344,6 +344,25 @@ struct t_frag{
     objs.back().update_trigons();
   }
   //...
+  struct t_raycast_result_v2{
+    int model_id=0;
+    float t=-1;
+  };
+  t_raycast_result_v2 do_raycast_v2(const t_photon&photon){return do_raycast_v2(photon.pos,photon.dir);}
+  t_raycast_result_v2 do_raycast_v2(const vec3f&pos,const vec3f&dir){
+    t_raycast_result_v2 out;
+    for(auto&ex:objs){
+      for(int i=0;i<ex.trigons.size();i++){
+        auto&it=ex.trigons[i];
+        auto t=raycast_to_trigon_v2(pos,dir,it.a,it.b,it.c);
+        if(t<0)continue;
+        if(out.t>0&&out.t<t)continue;
+        out.t=t;
+        out.model_id=ex.model_id;
+      }
+    }
+    return out;
+  }
   struct t_raycast_result{
     vec3f pos,n;
     QapColor color;
@@ -390,6 +409,25 @@ struct t_frag{
     if(t[0]&&t[2])return nope;
     t_raycast_result out;out.pos=point;out.n=n;out.t=abs(py/dy);
     return out;
+  }
+  float raycast_to_trigon_v2(const vec3f&pos,const vec3f&dir,const vec3f&A,const vec3f&B,const vec3f&C){
+    const float EPSILON=0.000001f;
+    vec3f edge1,edge2,h,s,q;
+    float a,f,u,v;
+    edge1=B-A;
+    edge2=C-A;
+    h=cross(dir,edge2);
+    a=dot(edge1,h);
+    if(a>-EPSILON&&a<EPSILON)return -1;
+    f=1.0f/a;
+    s=pos-A;
+    u=f*dot(s,h);
+    if(u<0.0f||u>1.0f)return -1;
+    q=cross(s,edge1);
+    v=f*dot(dir,q);
+    if(v<0.0f||u+v>1.0f)return -1;
+    auto t=f*dot(edge2,q);
+    return t>EPSILON?t:-1;
   }
 };
 static vec3d to_vec3d(const QapColor&c){return vec3d(c.r,c.g,c.b)*(1.0/255.0);}
@@ -617,7 +655,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
     int wins=0;int hit2=0;
     for(auto&dir:dirs){
       if(dot(out.n,dir)>0)continue;
-      auto rc=scene.do_raycast(out.pos,dir);
+      auto rc=scene.do_raycast_v2(out.pos,dir);
       if(rc.t<=0)continue;
       if(rc.model_id==sky_id)wins++;
       if(rc.model_id==model_id){

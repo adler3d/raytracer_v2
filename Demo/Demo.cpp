@@ -669,17 +669,32 @@ struct t_hdr_v2{
 };
 static void hdr_pixmap_v2(vector<vector<vec3f>>&pix,float&koef,vec3f&dno,vec3f&min3f,float min=0x00,float max=0xff)
 {
-  float low=1e20;float top=-low;
-  for(auto&it:pix)QAP_FOREACH(it,top=std::max<real>(vec3f_max(ex),top);low=std::min<real>(vec3f_min(ex),low));
+  vector<vec3f> pixtmp;
+  for(auto&it:pix)QAP_FOREACH(it,pixtmp.push_back(ex));
+  vector<float> x,y,z;x.resize(pixtmp.size());y=x;z=x;
+  QAP_FOREACH(pixtmp,x[i]=ex.x);
+  QAP_FOREACH(pixtmp,y[i]=ex.y);
+  QAP_FOREACH(pixtmp,z[i]=ex.z);
+  std::sort(x.begin(),x.end());
+  std::sort(y.begin(),y.end());
+  std::sort(z.begin(),z.end());
+  auto d=0.007;
+  auto lowx=x[int(x.size()*d)];auto topx=x[int(x.size()*(1.0-d))];
+  auto lowy=y[int(y.size()*d)];auto topy=y[int(y.size()*(1.0-d))];
+  auto lowz=z[int(z.size()*d)];auto topz=z[int(z.size()*(1.0-d))];
+  auto low=std::min({lowx,lowy,lowz});
+  auto top=std::max({topx,topy,topz});
   float dip=max-min;
   koef=(dip/(top-low));
   dno=vec3f(1,1,1)*low;min3f=vec3f(min,min,min);
-  for(auto&it:pix)QAP_FOREACH(it,ex=min3f+(ex-dno)*koef);
-  {
-    float low=1e20;float top=-low;
-    for(auto&it:pix)QAP_FOREACH(it,top=std::max<real>(vec3f_max(ex),top);low=std::min<real>(vec3f_min(ex),low));
-    //QapDebugMsg(to_string(low)+" "+to_string(top));
-  }
+  auto f=[&](vec3f v){if(v.x<0)v.x=0;if(v.y<0)v.y=0;if(v.z<0)v.z=0;return v;};
+  auto g=[&](vec3f v){if(v.x>max)v.x=max;if(v.y>max)v.y=max;if(v.z>max)v.z=max;return v;};
+  for(auto&it:pix)QAP_FOREACH(it,ex=g(min3f+f(ex-dno)*koef));
+  //{
+  //  float low=1e20;float top=-low;
+  //  for(auto&it:pix)QAP_FOREACH(it,top=std::max<real>(vec3f_max(ex),top);low=std::min<real>(vec3f_min(ex),low));
+  //  QapDebugMsg(to_string(low)+" "+to_string(top));
+  //}
 }
 t_hdr_v2 to_hdr_v2(const vector<vector<t_frag>>&arr){
   t_hdr_v2 out;

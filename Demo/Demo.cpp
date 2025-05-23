@@ -207,7 +207,7 @@ void load_mesh_obj(t_mesh&out,const string&fn,bool aabb){
     auto top_zid=QAP_MINVAL_ID_OF_VEC(out.VA,-ex.z);
     auto dno=vec3f(A[dno_xid].x,A[dno_yid].y,A[dno_zid].z);
     auto top=vec3f(A[top_xid].x,A[top_yid].y,A[top_zid].z);
-    return (top-dno)*0.5;
+    return dno+(top-dno)*0.5;
   };
   auto avg_pos=aabb?find_center_by_aabb():find_center_by_sphere();
   QAP_FOREACH(out.VA,ex-=avg_pos);

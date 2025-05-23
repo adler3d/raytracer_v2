@@ -749,7 +749,7 @@ struct t_frags{
     }
   }
 };
-void make_results(const vector<string>&fns){
+void make_results(const vector<string>&fns,bool use_ca2=false){
   vector<t_frags> arr;
   arr.resize(fns.size());
   vector<vector<t_frag>> tmp;tmp.resize(arr.size());
@@ -763,25 +763,33 @@ void make_results(const vector<string>&fns){
   for(int i=0;i<arr.size();i++){
     auto&ex=arr[i];
     auto&ca=h2.arr[i];
-    auto fn=remove_file_ext(fns[i])+".png";
+    auto ca2=ca;
+    auto fn=remove_file_ext(fns[i])+string(use_ca2?".front":"")+".png";
+    auto fn2=remove_file_ext(fns[i])+".shadow.png";
     cout<<("saving to "+fn)<<endl;
     for(int i=0;i<ca.size();i++){
-      auto&it=ca[i];
+      //auto&it=ca[i];
+      auto&it=use_ca2?ca2[i]:ca[i];
       auto&fg=ex.frags_ground[i];
       if(fg!=0){
         it.a=h2.wins_to_alpha(fg);
         it.r=0;it.g=0;it.b=0;
+        if(use_ca2)ca[i]=0;
+      }else{
+        if(use_ca2)it=0;
       }
     }
     if(bool need_alpha_circle=true){
       int n=ex.cx*ex.cy;
+      auto out=use_ca2?ca2:ca;
       for(int i=0;i<n;i++){
         int y=i/ex.cx;int x=i%ex.cx;
         if(vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag()<ex.cx*0.5)continue;
-        ca[i].a=0;
+        out[i].a=0;
       }
     }
     lodepng_save_to_png(ex.cx,ex.cy,ca,fn.c_str());
+    if(use_ca2)lodepng_save_to_png(ex.cx,ex.cy,ca2,fn2.c_str());
   }
 }
 void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<vec3f>&dirs,t_proj&proj,const string&name){
@@ -942,7 +950,7 @@ void render_model_from_file(const string&path,const string&fn,int d=128,real ang
   if(dirs.empty())dirs=load_dirs("dirs.bin",true);
   auto proj=make_proj(d,d,ang);
   auto name=remove_file_ext(fn);
-  render(ground,model,sky,dirs,proj,name+"_"+IToS(d)+"_"+FToS(ang));
+  render(ground,model,sky,dirs,proj,name+"_"+IToS(d)+(ang?"_"+FToS(ang):""));
 }
 int get_num_threads(){
   atomic_int num_threads=0;
@@ -980,8 +988,10 @@ int main(int argc,char *argv[]){
     cout<<"path=["<<path<<"]"<<endl;
     if(string(argv[1])=="--mr"){
       vector<string> fns;
+      bool use_ca2=false;
       for(int i=2;i<argc;i++){
-        auto fn=argv[i];
+        string fn=argv[i];
+        if(fn=="--use_ca2"){use_ca2=true;continue;}
         if(is_dir(fn)){
           std::string path=fn;
           for(const auto&entry:fs::directory_iterator(path)){
@@ -992,7 +1002,7 @@ int main(int argc,char *argv[]){
           }
         }else fns.push_back(fn);
       }
-      make_results(fns);
+      make_results(fns,use_ca2);
     }else{
       int size=argc>=3?stoi(argv[2]):128;
       auto ang=argc>=4?stof(argv[3])*Pi/180.0:0;

@@ -123,7 +123,7 @@ struct t_mesh{
   }*/
   bool empty()const{return IA.empty();}
 };
-void load_mesh_obj(t_mesh&out,const string&fn){
+void load_mesh_obj(t_mesh&out,const string&fn,bool aabb){
   if(!out.IA.empty())return;
   QapColor diffuse=0xFFffffff;
   t_obj_mtllib lib;
@@ -190,10 +190,13 @@ void load_mesh_obj(t_mesh&out,const string&fn){
     if(t[0]=="v"||t[0]=="f")QapDebugMsg("hm...\n"+ex);
   }
   if(out.VA.empty())return;
-    
-  vec3f avg_pos;
-  QAP_FOREACH(out.VA,avg_pos+=ex);
-  if(!out.VA.empty())avg_pos*=1.0/out.VA.size();
+  auto find_center_by_sphere=[&](){  
+    vec3f avg_pos;
+    QAP_FOREACH(out.VA,avg_pos+=ex);
+    if(!out.VA.empty())avg_pos*=1.0/out.VA.size();
+    return avg_pos;
+  };
+  auto avg_pos=find_center_by_sphere();
   QAP_FOREACH(out.VA,ex-=avg_pos);
   
   auto id=QAP_MINVAL_ID_OF_VEC(out.VA,-ex.SqrMag());
@@ -835,9 +838,9 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   }
   hdr.save_to_png(name+".png");
 }
-t_obj load_obj(const string&fn){
+t_obj load_obj(const string&fn,bool aabb){
   t_mesh m;
-  load_mesh_obj(m,fn);
+  load_mesh_obj(m,fn,aabb);
   return {m};
 }
 t_obj generate_sky(){
@@ -901,11 +904,11 @@ t_proj make_proj(int w,int h,real ang){
   proj.center=proj.pos+proj.dir*proj.zn;
   return proj;
 }
-void render_model_from_file(const string&path,const string&fn,int d=128,real ang=0){
-  auto ground=load_obj(path+"empty_ground.obj");
-  if(ground.m.VA.empty())ground=load_obj("empty_ground.obj");
+void render_model_from_file(const string&path,const string&fn,int d=128,real ang=0,bool aabb=false){
+  auto ground=load_obj(path+"empty_ground.obj",false);
+  if(ground.m.VA.empty())ground=load_obj("empty_ground.obj",false);
   for(auto&ex:ground.m.CA){ex=0xFFffffff;}
-  auto model=load_obj(fn);
+  auto model=load_obj(fn,aabb);
   auto sky=generate_sky();
   auto dirs=load_dirs(path+"dirs.bin",false);
   if(dirs.empty())dirs=load_dirs("dirs.bin",true);
@@ -932,11 +935,11 @@ string get_path(const string&fn){
   }else if(apos==string::npos){split_by("\\");}else split_by("/");
   return s;
 }
+namespace fs=std::filesystem;
 bool is_dir(const string&fn){
-  struct stat s;
-  if(stat(fn.c_str(),&s)==0){
-    if(s.st_mode&S_IFDIR)return true;
-  }
+  const fs::path path(fn);
+  std::error_code ec;
+  if(fs::is_directory(path,ec))return true;
   return false;
 }
 int main(int argc,char *argv[]){
@@ -952,7 +955,6 @@ int main(int argc,char *argv[]){
       for(int i=2;i<argc;i++){
         auto fn=argv[i];
         if(is_dir(fn)){
-          namespace fs=std::filesystem;
           std::string path=fn;
           for(const auto&entry:fs::directory_iterator(path)){
             if(fs::is_regular_file(entry)) {
@@ -963,7 +965,12 @@ int main(int argc,char *argv[]){
         }else fns.push_back(fn);
       }
       make_results(fns);
-    }else render_model_from_file(path,argv[1],argc>=3?stoi(argv[2]):128,argc>=4?stof(argv[3])*Pi/180.0:0);
+    }else{
+      int size=argc>=3?stoi(argv[2]):128;
+      auto ang=argc>=4?stof(argv[3])*Pi/180.0:0;
+      bool aabb=argc>=5?(string(argv[4])=="aabb"):false;
+      render_model_from_file(path,argv[1],size,ang,aabb);
+    }
   }
   return 0;
 }

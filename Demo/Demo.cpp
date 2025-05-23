@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <string>
+#include <filesystem>
 //#include <io.h>
 using namespace std;
 
@@ -580,7 +581,15 @@ static vector<QapColor> hdr_pixmap(const vector<QapColor>&pix)
   return out;
 }
 #pragma endregion
-
+string remove_file_ext(string fn){
+  auto arr=split(fn,".");
+  arr.pop_back();
+  return join(arr,".");
+}
+string get_file_ext(string fn){
+  auto arr=split(fn,".");
+  return arr.back();
+}
 #include "lodepng.cpp"
 static void lodepng_encodeOneStep(const char* filename, std::vector<unsigned char>& image, unsigned width, unsigned height)
 {
@@ -631,7 +640,120 @@ t_hdr to_hdr(const vector<t_frag>&frags,int cx,int cy){
   QAP_FOREACH(farr,out.arr[i]=QapColor(ex.color.x,ex.color.y,ex.color.z));
   return out;
 }
-void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<vec3f>&dirs,t_proj&proj,const string&fn){
+struct t_hdr_v2{
+  vector<vector<QapColor>> arr;
+  float koef=0;
+  vec3f dno,min3f;
+  unsigned char wins_to_alpha(int wins){
+    static constexpr real inv_gamma=1.0/2.2;
+    auto w=pow(float(wins),inv_gamma);
+    auto c=(min3f.x+(w-dno.x)*koef);
+    return 255-c;
+  }
+};
+static void hdr_pixmap_v2(vector<vector<vec3f>>&pix,float&koef,vec3f&dno,vec3f&min3f,float min=0x00,float max=0xff)
+{
+  float low=1e20;float top=-low;
+  for(auto&it:pix)QAP_FOREACH(it,top=std::max<real>(vec3f_max(ex),top);low=std::min<real>(vec3f_min(ex),low));
+  float dip=max-min;
+  koef=(dip/(top-low));
+  dno=vec3f(1,1,1)*low;min3f=vec3f(min,min,min);
+  for(auto&it:pix)QAP_FOREACH(it,ex=min3f+(ex-dno)*koef);
+  {
+    float low=1e20;float top=-low;
+    for(auto&it:pix)QAP_FOREACH(it,top=std::max<real>(vec3f_max(ex),top);low=std::min<real>(vec3f_min(ex),low));
+    //QapDebugMsg(to_string(low)+" "+to_string(top));
+  }
+}
+t_hdr_v2 to_hdr_v2(const vector<vector<t_frag>>&arr){
+  t_hdr_v2 out;
+  vector<vector<vec3f>> tmp;
+  out.arr.resize(arr.size());tmp.resize(arr.size());
+  static const real inv_gamma=1.0/2.2;
+  for(int i=0;i<arr.size();i++){
+    auto&inp=arr[i];
+    auto&t=tmp[i];
+    t.resize(inp.size());
+    QAP_FOREACH(inp,t[i]=vec3f_pow(ex.color,inv_gamma));
+  }
+  hdr_pixmap_v2(tmp,out.koef,out.dno,out.min3f,0.0,255.0);
+  for(int i=0;i<tmp.size();i++)out.arr[i].resize(tmp[i].size());
+  for(int j=0;j<tmp.size();j++){
+    auto&r=out.arr[j];
+    QAP_FOREACH(tmp[j],r[i]=QapColor(ex.x,ex.y,ex.z));
+  }
+  return out;
+}
+void save_frags(const string&name,const vector<t_frag>&frags,const vector<t_frag>&frags_ground,int cx,int cy){
+  CrutchIO IO;
+  IO.write((char*)&cx,sizeof(cx));
+  IO.write((char*)&cy,sizeof(cy));
+  for(auto&ex:frags){
+    IO.write((char*)&ex.color,sizeof(ex.color));
+  }
+  for(auto&ex:frags_ground){
+    IO.write((char*)&ex.wins,sizeof(ex.wins));
+  }
+  IO.SaveFile(name+".qaphdr");
+}
+struct t_frags{
+  string fn;
+  vector<t_frag> frags;
+  vector<int> frags_ground;
+  int cx{},cy{};
+  void load(const string&fn){
+    this->fn=fn;
+    CrutchIO IO;
+    IO.LoadFile(fn);
+    if(IO.mem.empty())QapDebugMsg("file not found or empty- "+ fn);
+    IO.read((char*)&cx,sizeof(cx));
+    IO.read((char*)&cy,sizeof(cy));
+    frags.resize(cx*cy);
+    for(auto&ex:frags){
+      IO.read((char*)&ex.color,sizeof(ex.color));
+    }
+    frags_ground.resize(frags.size());
+    for(auto&ex:frags_ground){
+      IO.read((char*)&ex,sizeof(ex));
+    }
+  }
+};
+void make_results(const vector<string>&fns){
+  vector<t_frags> arr;
+  arr.resize(fns.size());
+  vector<vector<t_frag>> tmp;tmp.resize(arr.size());
+  for(int i=0;i<arr.size();i++){
+    auto&ex=arr[i];
+    ex.load(fns[i]);
+    cout<<("loading "+fns[i])<<endl;
+    tmp[i]=ex.frags;
+  }
+  auto h2=to_hdr_v2(tmp);
+  for(int i=0;i<arr.size();i++){
+    auto&ex=arr[i];
+    auto&ca=h2.arr[i];
+    auto fn=remove_file_ext(fns[i])+".png";
+    cout<<("saving to "+fn)<<endl;
+    for(int i=0;i<ca.size();i++){
+      auto&it=ca[i];
+      auto&fg=ex.frags_ground[i];
+      if(fg!=0){
+        it.a=h2.wins_to_alpha(fg);
+        it.r=0;it.g=0;it.b=0;
+      }
+    }
+    if(bool need_alpha_circle=true){
+      int n=ex.cx*ex.cy;
+      for(int i=0;i<n;i++){
+        int y=i/ex.cx;int x=i%ex.cx;
+        if(vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag()<ex.cx*0.5)continue;
+        ca[i].a=0;
+      }
+    }
+    lodepng_save_to_png(ex.cx,ex.cy,ca,fn.c_str());
+  }
+}
+void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<vec3f>&dirs,t_proj&proj,const string&name){
   QapClock clock;
   enum{ground_id=0,model_id=1,sky_id=2};
   t_scene scene;
@@ -694,6 +816,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
     for(int i=0;i<n;i++)func(i);
   #endif
   //QapDebugMsg(to_string(g_hits2));
+  save_frags(name,frags,frags_ground,proj.cx,proj.cy);
   auto hdr=to_hdr(frags,proj.cx,proj.cy);
   for(int i=0;i<hdr.arr.size();i++){
     auto&ex=hdr.arr[i];
@@ -710,7 +833,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
       hdr.arr[i].a=0;
     }
   }
-  hdr.save_to_png(fn);
+  hdr.save_to_png(name+".png");
 }
 t_obj load_obj(const string&fn){
   t_mesh m;
@@ -778,17 +901,17 @@ t_proj make_proj(int w,int h,real ang){
   proj.center=proj.pos+proj.dir*proj.zn;
   return proj;
 }
-void render_model_from_file(const string&path,const string&name,int d=128,real ang=0){
+void render_model_from_file(const string&path,const string&fn,int d=128,real ang=0){
   auto ground=load_obj(path+"empty_ground.obj");
   if(ground.m.VA.empty())ground=load_obj("empty_ground.obj");
   for(auto&ex:ground.m.CA){ex=0xFFffffff;}
-  auto model=load_obj(name+".obj");
-  //for(auto&ex:model.m.VA){ex*=4*2*2;}
+  auto model=load_obj(fn);
   auto sky=generate_sky();
   auto dirs=load_dirs(path+"dirs.bin",false);
   if(dirs.empty())dirs=load_dirs("dirs.bin",true);
   auto proj=make_proj(d,d,ang);
-  render(ground,model,sky,dirs,proj,name+"_"+IToS(d)+"_"+FToS(ang)+".png");
+  auto name=remove_file_ext(fn);
+  render(ground,model,sky,dirs,proj,name+"_"+IToS(d)+"_"+FToS(ang));
 }
 int get_num_threads(){
   atomic_int num_threads=0;
@@ -809,17 +932,38 @@ string get_path(const string&fn){
   }else if(apos==string::npos){split_by("\\");}else split_by("/");
   return s;
 }
+bool is_dir(const string&fn){
+  struct stat s;
+  if(stat(fn.c_str(),&s)==0){
+    if(s.st_mode&S_IFDIR)return true;
+  }
+  return false;
+}
 int main(int argc,char *argv[]){
-  cout<<"v7\n omp_get_num_threads()="<<get_num_threads()<<endl;
+  cout<<"v8\n omp_get_num_threads()="<<get_num_threads()<<endl;
   auto path=get_path(argv[0]);
   if(argc==1){
     cout<<"Usage: Demo model.obj 128 0\n where 128 size of image and 0 the angle at which the image will be rendered"<<endl;
     return 0;
   }else{
     cout<<"path=["<<path<<"]"<<endl;
-    auto arr=split(string(argv[1]),".");
-    arr.pop_back();
-    render_model_from_file(path,join(arr,"."),argc>=3?stoi(argv[2]):128,argc>=4?stof(argv[3])*Pi/180.0:0);
+    if(string(argv[1])=="--mr"){
+      vector<string> fns;
+      for(int i=2;i<argc;i++){
+        auto fn=argv[i];
+        if(is_dir(fn)){
+          namespace fs=std::filesystem;
+          std::string path=fn;
+          for(const auto&entry:fs::directory_iterator(path)){
+            if(fs::is_regular_file(entry)) {
+              auto fn=entry.path().string();
+              if(get_file_ext(fn)=="qaphdr")fns.push_back(fn);
+            }
+          }
+        }else fns.push_back(fn);
+      }
+      make_results(fns);
+    }else render_model_from_file(path,argv[1],argc>=3?stoi(argv[2]):128,argc>=4?stof(argv[3])*Pi/180.0:0);
   }
   return 0;
 }

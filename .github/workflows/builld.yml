@@ -46,9 +46,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Demo
-          path: Demo.elf
+          path: Release/Demo.elf
       - name: Archive results
         uses: actions/upload-artifact@v4
         with:
           name: tank_hodun.png
-          path: Release/tank_hodun.png
+          path: Release/tank_hodun_128_0.000000.png

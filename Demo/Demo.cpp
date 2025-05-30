@@ -832,11 +832,15 @@ void make_results(const vector<string>&fns,bool use_ca2=false){
     if(bool need_alpha_circle=true){
       int n=ex.cx*ex.cy;
       auto out=use_ca2?ca2:ca;
-      for(int i=0;i<n;i++){
-        int y=i/ex.cx;int x=i%ex.cx;
-        if(vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag()<ex.cx*0.5)continue;
-        out[i].a=0;
-      }
+      auto f=[&](vector<QapColor>&ca){
+        for(int i=0;i<n;i++){
+          int y=i/ex.cx;int x=i%ex.cx;
+          if(vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag()<ex.cx*0.5)continue;
+          out[i].a=0;
+        }
+      };
+      f(ca);
+      if(use_ca2)f(ca2);
     }
     lodepng_save_to_png(ex.cx,ex.cy,ca,fn.c_str());
     if(use_ca2)lodepng_save_to_png(ex.cx,ex.cy,ca2,fn2.c_str());

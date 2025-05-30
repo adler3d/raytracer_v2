@@ -356,15 +356,47 @@ struct t_frag{
     }
   };
   vector<t_mesh> objs;
+  t_mesh last;float sky_miny=0;
+  
+  static float miny(const t_obj&obj){
+    int id=QAP_MINVAL_ID_OF_VEC(obj.m.VA,ex.y);
+    return id<0?0:obj.m.VA[id].y;
+  }
   void add(const t_obj&obj,int model_id){
     objs.push_back({obj,model_id});
     objs.back().update_trigons();
+    last=objs.back();
   }
   //...
   struct t_raycast_result_v2{
     int model_id=0;
     float t=-1;
   };
+  float ray_vs_plane(const vec3f&normal,const vec3f&center,const vec3f&ray_dir,const vec3f&ray_origin){
+    float denom=normal.dot(ray_dir);
+    if(abs(denom)>0.0001f){
+      float t=(center-ray_origin).dot(normal)/denom;
+      return t;
+    }
+    return -1;
+  }
+  t_raycast_result_v2 do_raycast_v3(const t_photon&photon){return do_raycast_v3(photon.pos,photon.dir);}
+  t_raycast_result_v2 do_raycast_v3(const vec3f&pos,const vec3f&dir){
+    t_raycast_result_v2 out;
+    auto tg=ray_vs_plane({0,1,0},{0,0,0},dir,pos);
+    out={0,tg};
+    for(int i=0;i<last.trigons.size();i++){
+      auto&it=last.trigons[i];
+      auto t=raycast_to_trigon_v2(pos,dir,it.a,it.b,it.c);
+      if(t<0)continue;
+      if(out.t>0&&out.t<t)continue;
+      out.t=t;
+      out.model_id=last.model_id;
+    }
+    auto ts=ray_vs_plane({0,-1,0},{0,sky_miny,0},dir,pos);
+    if(ts<0)return out;
+    return out.t>0&&out.t<ts?out:t_raycast_result_v2{2,ts};
+  }
   t_raycast_result_v2 do_raycast_v2(const t_photon&photon){return do_raycast_v2(photon.pos,photon.dir);}
   t_raycast_result_v2 do_raycast_v2(const vec3f&pos,const vec3f&dir){
     t_raycast_result_v2 out;
@@ -386,6 +418,24 @@ struct t_frag{
     int model_id=0;
     float t=-1;
   };
+  t_raycast_result do_raycast_full(const t_photon&photon){return do_raycast_full(photon.pos,photon.dir);}
+  t_raycast_result do_raycast_full(const vec3f&pos,const vec3f&dir){
+    t_raycast_result out;
+    auto tg=ray_vs_plane({0,-1,0},{0,0,0},dir,pos);
+    out={pos+dir*tg,{0,-1,0},0xffffffff,0,tg};
+    for(int i=0;i<last.trigons.size();i++){
+      auto&it=last.trigons[i];
+      auto rr=raycast_to_trigon(pos,dir,it.a,it.b,it.c);
+      if(rr.t<0)continue;
+      if(out.t>0&&out.t<rr.t)continue;
+      out=rr;
+      out.color=last.colors[i];
+      out.model_id=last.model_id;
+    }
+    auto ts=ray_vs_plane({0,+1,0},{0,sky_miny,0},dir,pos);
+    if(ts<0)return out;
+    return out.t>0&&out.t<ts?out:t_raycast_result{pos+dir*ts,{0,+1,0},0xffffffff,2,ts};
+  }
   t_raycast_result do_raycast(const t_photon&photon){return do_raycast(photon.pos,photon.dir);}
   t_raycast_result do_raycast(const vec3f&pos,const vec3f&dir){
     t_raycast_result out;
@@ -796,27 +846,29 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   QapClock clock;
   enum{ground_id=0,model_id=1,sky_id=2};
   t_scene scene;
-  scene.add(ground,ground_id);
+  //scene.add(ground,ground_id);
   scene.add(model,model_id);
-  scene.add(sky,sky_id);
+  //scene.add(sky,sky_id);
+  scene.sky_miny=t_scene::miny(sky);
   vector<t_frag> frags,frags_ground;
   frags.resize(proj.count_pixels());
   frags_ground.resize(proj.count_pixels());
   int i=0;atomic_int g_hits2=0;
   int n=proj.cy*proj.cx;
   atomic_int di=0;
-  int prev_ticks=clock.MS();
+  auto prev_ticks=clock.MS();
   auto func=[&](int i)
   {
+    //cout<<i<<endl;
     int y=i/proj.cx;int x=i%proj.cx;
     auto photon=proj.get_photon(x,y);
     auto&frag=frags[i];auto&frag_ground=frags_ground[i];
-    auto out=scene.do_raycast(photon);
+    auto out=scene.do_raycast_full(photon);
     if(out.t<=0)return;
     int wins=0;int hit2=0;
     for(auto&dir:dirs){
       if(dot(out.n,dir)>0)continue;
-      auto rc=scene.do_raycast_v2(out.pos,dir);
+      auto rc=scene.do_raycast_v3(out.pos,dir);
       if(rc.t<=0)continue;
       if(rc.model_id==sky_id)wins++;
       if(rc.model_id==model_id){

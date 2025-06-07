@@ -356,10 +356,15 @@ struct t_frag{
     }
   };
   vector<t_mesh> objs;
-  t_mesh last;float sky_miny=0;
+  t_mesh last;float sky_miny=0;float sky_r=0;
   
   static float miny(const t_obj&obj){
     int id=QAP_MINVAL_ID_OF_VEC(obj.m.VA,ex.y);
+    return id<0?0:obj.m.VA[id].y;
+  }
+  static float calc_r(const t_obj&obj){
+    vec3f avg{};QAP_FOREACH(obj.m.VA,avg+=ex);avg*=(1.0/obj.m.VA.size());
+    int id=QAP_MINVAL_ID_OF_VEC(obj.m.VA,-(ex-avg).SqrMag());
     return id<0?0:obj.m.VA[id].y;
   }
   void add(const t_obj&obj,int model_id){
@@ -393,8 +398,11 @@ struct t_frag{
       out.t=t;
       out.model_id=last.model_id;
     }
-    auto ts=ray_vs_plane({0,-1,0},{0,sky_miny,0},dir,pos);
+    vec3f sky_dir={0,-1,0};vec3f sky_origin={0,sky_miny,0};
+    auto ts=ray_vs_plane(sky_dir,sky_origin,dir,pos);
     if(ts<0)return out;
+    auto p=sky_origin+sky_dir*ts;
+    if(p.SqrMag()>sky_r)return out;
     return out.t>0&&out.t<ts?out:t_raycast_result_v2{2,ts};
   }
   t_raycast_result_v2 do_raycast_v2(const t_photon&photon){return do_raycast_v2(photon.pos,photon.dir);}
@@ -432,8 +440,11 @@ struct t_frag{
       out.color=last.colors[i];
       out.model_id=last.model_id;
     }
-    auto ts=ray_vs_plane({0,+1,0},{0,sky_miny,0},dir,pos);
+    vec3f sky_origin={0,sky_miny,0};vec3f sky_dir={0,+1,0};
+    auto ts=ray_vs_plane(sky_dir,sky_origin,dir,pos);
     if(ts<0)return out;
+    auto p=sky_origin+sky_dir*ts;
+    if(p.SqrMag()>sky_r)return out;
     return out.t>0&&out.t<ts?out:t_raycast_result{pos+dir*ts,{0,+1,0},0xffffffff,2,ts};
   }
   t_raycast_result do_raycast(const t_photon&photon){return do_raycast(photon.pos,photon.dir);}
@@ -831,12 +842,32 @@ void make_results(const vector<string>&fns,bool use_ca2=false){
     }
     if(bool need_alpha_circle=true){
       int n=ex.cx*ex.cy;
-      auto out=use_ca2?ca2:ca;
+      const int maxr=ex.cx*0.5;
       auto f=[&](vector<QapColor>&ca){
+        real avga=0;int avgn=0;
         for(int i=0;i<n;i++){
           int y=i/ex.cx;int x=i%ex.cx;
-          if(vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag()<ex.cx*0.5)continue;
-          out[i].a=0;
+          int m=vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag();
+          if(m!=maxr-4)continue;
+          avga+=ca[i].a;
+          avgn++;
+        }
+        avga/=avgn;
+        constexpr int rn=4;
+        real avg_alpha[rn]={0};
+        for(int i=0;i<rn;i++)avg_alpha[i]=Lerp(0.0,avga,real(i)/rn);
+        avg_alpha[0]=0;
+        for(int i=0;i<n;i++){
+          int y=i/ex.cx;int x=i%ex.cx;
+          int m=vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag();
+          for(int j=0;j<rn;j++)if(m==int(maxr-j))ca[i].a=avg_alpha[j];
+        }
+        for(int i=0;i<n;i++){
+          int y=i/ex.cx;int x=i%ex.cx;
+          auto m=vec2d(x-ex.cx*0.5,y-ex.cy*0.5).Mag();
+          if(int(m)==int(maxr))continue;
+          if(m<maxr)continue;
+          ca[i].a=0;
         }
       };
       f(ca);
@@ -854,6 +885,7 @@ void render(const t_obj&ground,const t_obj&model,const t_obj&sky,const vector<ve
   scene.add(model,model_id);
   //scene.add(sky,sky_id);
   scene.sky_miny=t_scene::miny(sky);
+  scene.sky_r=scene.calc_r(sky);
   vector<t_frag> frags,frags_ground;
   frags.resize(proj.count_pixels());
   frags_ground.resize(proj.count_pixels());
